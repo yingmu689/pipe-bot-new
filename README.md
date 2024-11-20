@@ -42,7 +42,7 @@ With these insights, they can reroute traffic dynamically to avoid bottlenecks, 
 1. Clone this repository:
    ```bash
    git clone https://github.com/Zlkcyber/pipe-bot.git
-   cd ipe-bot
+   cd pipe-bot
    ```
 2. Install dependencies:
    ```bash
