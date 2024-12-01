@@ -4,7 +4,7 @@ const { readToken, loadProxies } = require("../utils/file");
 const { logger } = require("../utils/logger");
 const fs = require("fs").promises;
 
-const API_BASE = "https://pipe-network-backend.pipecanary.workers.dev/api";
+const API_BASE = "https://api.pipecdn.app/api";
 // fetch points
 async function fetchPoints(token, username, agent) {
 
@@ -41,8 +41,7 @@ async function sendHeartbeat() {
         const agent = new HttpsProxyAgent(proxy); 
 
         try {
-            const ip = await fetchIpAddress(agent); 
-            const geo = await fetchGeoLocation(ip, agent); 
+            const geoInfo = await fetchGeoLocation(agent); 
 
             const response = await fetch(`${API_BASE}/heartbeat`, {
                 method: "POST",
@@ -50,7 +49,11 @@ async function sendHeartbeat() {
                     Authorization: `Bearer ${token}`,
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify({ username, ip, geo }),
+                body: JSON.stringify({
+                ip: geoInfo.ip,
+                location: geoInfo.location,
+                timestamp: Date.now(),
+                }),
                 agent, 
             });
 
@@ -66,25 +69,19 @@ async function sendHeartbeat() {
     }
 }
 
-// Function to fetch IP address 
-async function fetchIpAddress(agent) {
-    try {
-        const response = await fetch("https://api64.ipify.org?format=json", { agent });
-        const { ip } = await response.json();
-        return ip;
-    } catch (error) {
-        logger("Error fetching IP address:", "error", error);
-        throw error;
-    }
-}
-
 // Function to fetch GeoLocation
-async function fetchGeoLocation(ip, agent) {
-    const response = await fetch(`https://ipapi.co/${ip}/json/`, { agent });
-    if (response.ok) {
-        return await response.json();
-    }; 
-    return null;
+async function fetchGeoLocation(agent) {
+  try {
+    const response = await fetch('https://ipinfo.io/json', { agent });
+    if (!response.ok) throw new Error('Failed to fetch Geo-location data');
+    const data = await response.json();
+    return {
+      ip: data.ip,
+      location: `${data.city}, ${data.region}, ${data.country}`,
+    };
+  } catch (error) {
+    console.error('Geo-location error:', error);
+    return { ip: 'unknown', location: 'unknown' };
+  }
 }
-
 module.exports = { sendHeartbeat };

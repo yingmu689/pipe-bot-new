@@ -1,2 +1,0 @@
-http://username:pass@ip:port
-http://username:pass@ip:port
