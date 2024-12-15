@@ -15,15 +15,15 @@ async function runNodeTests() {
     }
 
     try {
-        const initialAgent = new HttpsProxyAgent(proxies[0 % proxies.length]); 
+        const initialAgent = new HttpsProxyAgent(proxies[0 % proxies.length]);
         const response = await fetch(`${API_BASE}/nodes`, { agent: initialAgent });
         const nodes = await response.json();
 
-        const tokens = await readToken(); 
+        const tokens = await readToken();
 
         for (let i = 0; i < nodes.length; i++) {
             const node = nodes[i];
-            const proxy = proxies[i % proxies.length]; 
+            const proxy = proxies[i % proxies.length];
             const agent = new HttpsProxyAgent(proxy);
 
             logger(`Testing node ${node.node_id} using proxy: ${proxy}`);
