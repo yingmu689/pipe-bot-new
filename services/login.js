@@ -4,7 +4,6 @@ const { HttpsProxyAgent } = require("https-proxy-agent");
 const { logger } = require("../utils/logger");
 const fs = require('fs');
 
-const API_BASE = "https://api.pipecdn.app/api";
 const ACCOUNT_FILE = 'account.json';
 
 // Function to read all accounts from account.json
@@ -17,10 +16,10 @@ async function readUsersFromFile() {
         return [];
     }
 }
-async function login(email, password, proxy) {
+async function login(email, password, proxy, API_BASE) {
     const agent = new HttpsProxyAgent(proxy);
     try {
-        const response = await fetch(`${API_BASE}/login`, {
+        const response = await fetch(`${API_BASE}/api/login`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email, password }),
@@ -46,7 +45,7 @@ async function login(email, password, proxy) {
         logger(`Error logging in with ${email}:`, 'error', error);
     }
 }
-async function loginWithAllAccounts() {
+async function loginWithAllAccounts(API_BASE) {
     const proxies = await loadProxies();
     const accounts = await readUsersFromFile();
 
@@ -54,7 +53,7 @@ async function loginWithAllAccounts() {
         const account = accounts[i];
         const proxy = proxies[i % proxies.length];
         logger(`Attempting to login with ${account.email}...`);
-        await login(account.email, account.password, proxy);
+        await login(account.email, account.password, proxy, API_BASE);
     };
 
 }
