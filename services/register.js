@@ -3,7 +3,7 @@ const fs = require('fs');
 const readlineSync = require('readline-sync');
 const { HttpsProxyAgent } = require("https-proxy-agent");
 const { logger } = require("../utils/logger");
-const { loadProxies } = require("../utils/file");
+const { loadProxies, headers } = require("../utils/file");
 
 const ACCOUNT_FILE = 'account.json';
 
@@ -14,7 +14,8 @@ async function registerUser(email, password, proxy, API_URL) {
         const response = await fetch(`${API_URL}/api/signup`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
+                ...headers,
+                'content-type': 'application/json',
             },
             body: JSON.stringify({
                 email: email,
@@ -79,6 +80,7 @@ async function register(API_URL) {
     logger(`Using proxy: ${randomProxy}`);
 
     await registerUser(email, password, randomProxy, API_URL);
+    return;
 }
 
 module.exports = { promptUserForCredentials, register };

@@ -1,13 +1,17 @@
 const fetch = require("node-fetch");
 const { HttpsProxyAgent } = require("https-proxy-agent");
-const { readToken, loadProxies } = require("../utils/file");
+const { readToken, loadProxies, headers } = require("../utils/file");
 const { logger } = require("../utils/logger");
 
 // Fetch points for a user
 async function fetchPoints(token, username, agent, API_BASE) {
     try {
         const response = await fetch(`${API_BASE}/api/points`, {
-            headers: { Authorization: `Bearer ${token}` },
+            headers: {
+                ...headers,
+                "content-type": "application/json",
+                "authorization": `Bearer ${token}`,
+            },
             agent,
         });
 
@@ -42,14 +46,15 @@ async function sendHeartbeat(API_BASE) {
         const agent = new HttpsProxyAgent(proxy);
 
         try {
-            await checkForRewards(API_BASE, token)
+            //await checkForRewards(API_BASE, token)
             const geoInfo = await getGeoLocation(agent);
 
             const response = await fetch(`${API_BASE}/api/heartbeat`, {
                 method: "POST",
                 headers: {
-                    Authorization: `Bearer ${token}`,
-                    "Content-Type": "application/json",
+                    ...headers,
+                    "content-type": "application/json",
+                    "authorization": `Bearer ${token}`,
                 },
                 body: JSON.stringify({
                     ip: geoInfo.ip,
@@ -76,12 +81,12 @@ async function sendHeartbeat(API_BASE) {
 // Fetch IP and Geo-location data
 async function getGeoLocation(agent) {
     try {
-        const response = await fetch('https://ipapi.co/json/', { agent });
+        const response = await fetch('https://ipwhois.app/json/', { agent });
         if (!response.ok) throw new Error(`Geo-location request failed with status ${response.status}`);
         const data = await response.json();
         return {
             ip: data.ip,
-            location: `${data.city}, ${data.region}, ${data.country_name}`,
+            location: `${data.city}, ${data.region}, ${data.country}`,
         };
     } catch (error) {
         logger(`Geo-location error: ${error.message}`, "error");
@@ -94,7 +99,11 @@ async function checkForRewards(baseUrl, token) {
 
     try {
         const response = await fetch(`${baseUrl}/api/rewards`, {
-            headers: { Authorization: `Bearer ${token}` },
+            headers: {
+                ...headers,
+                "content-type": "application/json",
+                "authorization": `Bearer ${token}`,
+            }, agent,
         });
 
         if (response.ok) {

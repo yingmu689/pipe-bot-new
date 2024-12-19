@@ -1,7 +1,8 @@
 const fetch = require("node-fetch");
-const { readToken, loadProxies } = require("../utils/file");
+const { readToken, loadProxies, headers } = require("../utils/file");
 const { HttpsProxyAgent } = require("https-proxy-agent");
 const { logger } = require("../utils/logger");
+
 
 // Function to fetch the base URL
 async function fetchBaseUrl(fallbackUrl) {
@@ -48,28 +49,35 @@ async function runNodeTests(API_BASE) {
     }
 
     try {
-        const initialAgent = new HttpsProxyAgent(proxies[0 % proxies.length]);
-        const response = await fetch(`${API_BASE}/api/nodes`, { agent: initialAgent });
-        if (!response.ok) throw new Error(`Failed to fetch nodes with status ${response.status}`);
-        const nodes = await response.json();
-
         const tokens = await readToken();
         if (tokens.length === 0) {
             logger("No tokens available. Please check your token.txt file.", "error");
             return;
         }
 
-        for (let i = 0; i < nodes.length; i++) {
-            const node = nodes[i];
-            const proxy = proxies[i % proxies.length];
+        for (let j = 0; j < tokens.length; j++) {
+            const { token, username } = tokens[j];
+            const proxy = proxies[j % proxies.length];
             const agent = new HttpsProxyAgent(proxy);
 
-            logger(`Testing node ${node.node_id} using proxy: ${proxy}`, "info");
-            const latency = await testNodeLatency(node, agent);
+            logger(`Fetching nodes for ${username} using proxy: ${proxy}`, "info");
 
-            logger(`Node ${node.node_id} (${node.ip}) latency: ${latency}ms`, latency > 0 ? "success" : "warn");
+            const response = await fetch(`${API_BASE}/api/nodes`, {
+                headers: {
+                    ...headers,
+                    "authorization": `Bearer ${token}`,
+                },
+                agent,
+            });
 
-            for (const { token, username } of tokens) {
+            if (!response.ok) throw new Error(`Failed to fetch nodes with status ${response.status}`);
+            const nodes = await response.json();
+
+            for (const node of nodes) {
+                logger(`Testing node ${node.node_id} using proxy: ${proxy}`, "info");
+                const latency = await testNodeLatency(node, agent);
+
+                logger(`Node ${node.node_id} (${node.ip}) latency: ${latency}ms`, latency > 0 ? "success" : "warn");
                 await reportTestResult(node, latency, token, agent, username, API_BASE);
             }
         }
@@ -80,7 +88,7 @@ async function runNodeTests(API_BASE) {
     }
 }
 
-// Function to test node latency 
+// Function to test node latency
 async function testNodeLatency(node, agent) {
     const start = Date.now();
     const timeout = 5000;
@@ -97,7 +105,7 @@ async function testNodeLatency(node, agent) {
     }
 }
 
-// Function to report test result 
+// Function to report test result
 async function reportTestResult(node, latency, token, agent, username, API_BASE) {
     if (!token) {
         logger("No token found. Skipping result reporting.", "warn");
@@ -108,14 +116,15 @@ async function reportTestResult(node, latency, token, agent, username, API_BASE)
         const response = await fetch(`${API_BASE}/api/test`, {
             method: "POST",
             headers: {
+                ...headers,
                 "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
+                Authorization: `Bearer ${token}`
             },
             body: JSON.stringify({
                 node_id: node.node_id,
                 ip: node.ip,
                 latency: latency,
-                status: latency > 0 ? "online" : "offline",
+                status: latency > 0 ? "online" : "offline"
             }),
             agent,
         });
